@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TK-HR — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#171B1E; --zinc:#6B767C; --zinc-2:#A8B2B7;
+    --sheet:#E8ECEE; --card:#FFFFFF; --line:#D3DADD;
+    --blue:#0B5C8C; --blue-dark:#084566; --signal:#E09400;
+    --red:#C42B1C; --green:#1E7A4C; --r:10px; --pad:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--sheet);color:var(--ink);font-size:15px;line-height:1.5}
+  .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+  button{font:inherit;cursor:pointer}
+  input,select,textarea{font:inherit}
+
+  /* ---- login ---- */
+  #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center}
+  .login-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    padding:32px;width:320px}
+  .login-card h1{font-size:16px;margin:0 0 2px;color:var(--ink)}
+  .login-card p{margin:0 0 20px;font-size:12px;color:var(--zinc)}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;color:var(--zinc);margin-bottom:4px}
+  .field input,.field select,.field textarea{width:100%;padding:8px 10px;border:1px solid var(--line);
+    border-radius:6px;color:var(--ink);background:#fff}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue)}
+  .err{color:var(--red);font-size:12px;margin-top:8px;min-height:16px}
+  .btn{border:none;border-radius:7px;padding:9px 16px;font-weight:500;font-size:13px}
+  .btn-primary{background:var(--blue);color:#fff;width:100%}
+  .btn-primary:hover{background:var(--blue-dark)}
+  .btn-ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
+  .btn-ghost:hover{background:var(--sheet)}
+  .btn-sm{padding:5px 10px;font-size:12px;border-radius:6px}
+  .btn-red{background:var(--red);color:#fff}
+  .btn-green{background:var(--green);color:#fff}
+
+  /* ---- shell ---- */
+  #app-shell{display:none;min-height:100vh}
+  .topbar{background:var(--ink);color:#fff;padding:12px 20px;display:flex;align-items:center;
+    justify-content:space-between}
+  .topbar .brand{font-weight:600;font-size:14px}
+  .topbar .brand span{color:var(--zinc-2);font-weight:400;font-size:12px;margin-left:8px}
+  .topbar button{background:none;border:1px solid #444;color:#fff;border-radius:6px;padding:5px 12px;font-size:12px}
+  .tabs{background:var(--card);border-bottom:1px solid var(--line);display:flex;gap:2px;
+    padding:0 16px;overflow-x:auto}
+  .tab-btn{background:none;border:none;padding:12px 14px;font-size:13px;color:var(--zinc);
+    border-bottom:2px solid transparent;white-space:nowrap}
+  .tab-btn.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600}
+  .tab-btn:hover{color:var(--ink)}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px 20px 60px}
+  .panel{display:none}
+  .panel.active{display:block}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px;margin-bottom:16px}
+  .card h2{font-size:14px;margin:0 0 16px;color:var(--ink)}
+  .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px}
+  .row .field{margin-bottom:0;min-width:140px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;color:var(--zinc);font-weight:500;font-size:11px;text-transform:uppercase;
+    letter-spacing:.03em;padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  td input{width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;text-align:center}
+  td input.wide{width:70px}
+  .muted{color:var(--zinc);font-size:12px}
+  .tag{font-size:11px;background:var(--sheet);border-radius:999px;padding:2px 8px;color:var(--zinc)}
+  .badge{font-size:11px;border-radius:999px;padding:2px 9px;font-weight:600}
+  .badge.pending{background:#FFF3D6;color:#8A5A00}
+  .badge.approved,.badge.done{background:#DFF3E7;color:var(--green)}
+  .badge.rejected,.badge.overdue{background:#FBE0DC;color:var(--red)}
+  .badge.open{background:#E7F0F6;color:var(--blue)}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);
+    color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:99}
+  .toast.bad{background:var(--red)}
+  .loading{color:var(--zinc);font-size:13px;padding:20px 0;text-align:center}
+  .stat-strip{display:flex;gap:1px;background:var(--line);border:1px solid var(--line);
+    border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+  .stat-strip div{background:#fff;flex:1;padding:12px;text-align:center}
+  .stat-strip .label{font-size:11px;color:var(--zinc)}
+  .stat-strip .value{font-weight:600;font-size:17px;margin-top:2px}
+  .empty{color:var(--zinc-2);font-size:13px;padding:16px 0;text-align:center}
+
+  /* ---- payslip ---- */
+  .ps-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 20px;margin-bottom:12px}
+  .ps-card.finalized{background:#F7FAF8;border-color:#CFE6D8}
+  .ps-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .ps-head .name{font-weight:600;font-size:14px}
+  .ps-head .meta{color:var(--zinc);font-size:12px;margin-top:2px}
+  .ps-nums{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:12px}
+  .ps-nums div{background:var(--sheet);border-radius:7px;padding:8px 10px}
+  .ps-nums .label{font-size:10px;color:var(--zinc);text-transform:uppercase;letter-spacing:.03em}
+  .ps-nums .value{font-weight:600;font-size:14px;margin-top:2px}
+  .ps-nums .value.neg{color:var(--red)}
+  .ps-nums .value.pos{color:var(--green)}
+  .ps-net{background:var(--ink);color:#fff}
+  .ps-net .label{color:var(--zinc-2)}
+  .ps-edit{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;border-top:1px dashed var(--line);padding-top:12px}
+  .ps-edit .field{min-width:110px;margin-bottom:0}
+  .ps-edit .field input{width:100%}
+  .ps-loan-info{font-size:11px;color:var(--zinc);margin-bottom:4px}
+  .ps-actions{display:flex;gap:8px;margin-left:auto}
+
+  /* ---- สลิปเงินเดือน (สำหรับแคปส่งพนักงาน) ---- */
+  .slip-overlay{position:fixed;inset:0;background:var(--sheet);overflow-y:auto;z-index:200}
+  .slip-wrap{max-width:420px;margin:0 auto;padding:24px 16px}
+  .back-btn{background:none;border:none;font:inherit;font-size:13px;color:var(--zinc);
+    margin-bottom:14px;cursor:pointer}
+  .back-btn:hover{color:var(--ink)}
+  .slip-card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px}
+  .slip-brand{text-align:center;font-size:11px;letter-spacing:.04em;color:var(--zinc-2)}
+  .slip-title{text-align:center;font-size:17px;font-weight:600;color:var(--ink);margin-top:4px}
+  .slip-month{text-align:center;font-size:13px;color:var(--zinc)}
+  .slip-name-block{text-align:center;border-top:1px solid var(--sheet);border-bottom:1px solid var(--sheet);
+    padding:14px 0;margin:14px 0}
+  .slip-name{font-size:19px;font-weight:600;color:var(--ink)}
+  .slip-rows{font-size:14px}
+  .breakdown-row{display:flex;justify-content:space-between;padding:3px 0;color:var(--zinc)}
+  .breakdown-row.neg{color:var(--red)}
+  .slip-net{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);
+    margin-top:14px;padding-top:14px}
+  .slip-net .num{font-size:22px;font-weight:700;color:var(--blue)}
+  .slip-date{text-align:center;font-size:10.5px;color:var(--zinc-2);margin-top:16px}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <h1>TK-HR — Admin</h1>
+    <p>เข้าสู่ระบบสำหรับผู้ดูแล</p>
+    <div class="field"><label>Username</label><input id="lg-user" type="text" autocomplete="username"></div>
+    <div class="field"><label>Password</label><input id="lg-pass" type="password" autocomplete="current-password"></div>
+    <button class="btn btn-primary" id="lg-submit">เข้าสู่ระบบ</button>
+    <div class="err" id="lg-err"></div>
+  </div>
+</div>
+
+<div id="app-shell">
+  <div class="topbar">
+    <div class="brand">TK-HR <span>Admin</span></div>
+    <button id="btn-logout">ออกจากระบบ</button>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn" data-tab="day">ตรวจสอบรายวัน</button>
+    <button class="tab-btn" data-tab="money">เงิน</button>
+    <button class="tab-btn" data-tab="leave">อนุมัติการลา</button>
+    <button class="tab-btn" data-tab="ot">อนุมัติโอที</button>
+    <button class="tab-btn" data-tab="ann">ประกาศ</button>
+    <button class="tab-btn" data-tab="tasks">ประวัติงาน</button>
+    <button class="tab-btn" data-tab="payslip">สลิปปลายเดือน</button>
+  </div>
+  <div class="wrap">
+    <div class="panel" id="panel-day"></div>
+    <div class="panel" id="panel-money"></div>
+    <div class="panel" id="panel-leave"></div>
+    <div class="panel" id="panel-ot"></div>
+    <div class="panel" id="panel-ann"></div>
+    <div class="panel" id="panel-tasks"></div>
+    <div class="panel" id="panel-payslip"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ====== ตั้งค่า — ใส่ URL เดียวกับ API_URL ใน index.html ====== */
+const API_URL = 'https://script.google.com/macros/s/AKfycbzsn5VCvuxKYcPWa5QyFsQmTNtNlZDPiPXrvRm6O6fbJJQa1AaaTbBKuurymx5T2Ryk/exec';
+/* ============================================================= */
+
+const $ = function(id){ return document.getElementById(id); };
+const TYPE_TH = {personal:'ลากิจ', sick:'ลาป่วย', vacation:'พักร้อน', unpaid:'ลาไม่รับค่าจ้าง'};
+const TOKEN_KEY = 'tk_admin_token';
+
+let EMPS = [];              // {empId,name,baseAmount}
+let TAB_LOADED = {};        // กันโหลดซ้ำ — refresh ปุ่มในแต่ละแท็บเรียกใหม่เองได้
+let curTab = 'day';
+
+/* ---------- helpers ---------- */
+function esc(s){
+  return String(s==null?"":s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+function baht(n){ return (Number(n)||0).toLocaleString("th-TH",{maximumFractionDigits:2}); }
+function todayStr(){
+  var d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function monthStr(){ return todayStr().slice(0,7); }
+function toast(msg, bad){
+  var t = $('toast');
+  t.textContent = msg; t.className = 'toast' + (bad?' bad':''); t.hidden = false;
+  clearTimeout(t._h);
+  t._h = setTimeout(function(){ t.hidden = true; }, bad ? 5200 : 2600);
+}
+function empName(id){
+  var e = EMPS.find(function(x){ return String(x.empId)===String(id); });
+  return e ? e.name : id;
+}
+function empOptions(selectedId){
+  return EMPS.map(function(e){
+    return '<option value="'+esc(e.empId)+'"'+(String(e.empId)===String(selectedId)?' selected':'')+'>'+esc(e.name)+'</option>';
+  }).join('');
+}
+
+/* ---------- API ---------- */
+async function api(action, payload){
+  const token = sessionStorage.getItem(TOKEN_KEY);
+  if(action !== 'adminLogin' && !token){ doLogout(); throw new Error('กรุณาล็อกอิน'); }
+  const body = Object.assign({action:action}, token ? {adminToken:token} : {}, payload || {});
+  let res;
+  try{
+    res = await fetch(API_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(body)
+    });
+  }catch(e){ throw new Error('เชื่อมต่อไม่ได้ ตรวจสัญญาณเน็ตแล้วลองใหม่'); }
+
+  const text = await res.text();
+  let json;
+  try{ json = JSON.parse(text); }
+  catch(e){ throw new Error('เซิร์ฟเวอร์ตอบกลับผิดปกติ — ตรวจว่า deploy เวอร์ชันล่าสุดแล้วหรือยัง'); }
+
+  if(!json.ok){
+    if(/เซสชันหมดอายุ|ไม่ได้ล็อกอิน/.test(String(json.error))) doLogout();
+    throw new Error(json.error);
+  }
+  return json.data;
+}
+
+/* ---------- auth ---------- */
+function doLogout(){
+  sessionStorage.removeItem(TOKEN_KEY);
+  TAB_LOADED = {};
+  $('app-shell').style.display = 'none';
+  $('login-screen').style.display = 'flex';
+}
+
+async function doLogin(){
+  var err = $('lg-err');
+  err.textContent = '';
+  var user = $('lg-user').value.trim();
+  var pass = $('lg-pass').value;
+  if(!user || !pass){ err.textContent = 'กรอกให้ครบ'; return; }
+  try{
+    var data = await api('adminLogin', {username:user, password:pass});
+    sessionStorage.setItem(TOKEN_KEY, data.token);
+    $('login-screen').style.display = 'none';
+    $('app-shell').style.display = 'block';
+    await boot();
+  }catch(e){ err.textContent = e.message; }
+}
+
+async function boot(){
+  var money = await api('money', {all:true});
+  EMPS = money.employees || [];
+  switchTab('day');
+}
+
+/* ---------- tabs ---------- */
+function switchTab(name){
+  curTab = name;
+  document.querySelectorAll('.tab-btn').forEach(function(b){
+    b.classList.toggle('active', b.dataset.tab === name);
+  });
+  document.querySelectorAll('.panel').forEach(function(p){
+    p.classList.toggle('active', p.id === 'panel-'+name);
+  });
+  if(!TAB_LOADED[name]) loadTab(name);
+}
+
+function loadTab(name){
+  TAB_LOADED[name] = true;
+  if(name==='day') loadDay(todayStr());
+  else if(name==='money') loadMoney(null);
+  else if(name==='leave') loadLeave();
+  else if(name==='ot') loadOT();
+  else if(name==='ann') loadAnn();
+  else if(name==='tasks') loadTasks(monthStr(), '');
+  else if(name==='payslip') loadPayslip(monthStr());
+}
+
+/* ============================================================
+   ตรวจสอบรายวัน
+   ============================================================ */
+let dayDate = todayStr();
+let dayRows = [];
+
+async function loadDay(date){
+  dayDate = date;
+  $('panel-day').innerHTML = '<div class="loading">กำลังโหลด...</div>';
+  try{
+    var data = await api('dayReview', {date: date});
+    dayRows = data.rows;
+    renderDay();
+  }catch(e){ $('panel-day').innerHTML = '<div class="empty">'+esc(e.message)+'</div>'; }
+}
+
+function renderDay(){
+  var rowsHtml = dayRows.map(function(r, i){
+    var lateBadge = r.lateActual > 0 ? '<span class="badge rejected">สาย '+r.lateActual+' น.</span>' : '';
+    return '<tr>'
+      + '<td>'+esc(r.name)+'<div class="muted">'+esc(r.department)+'</div></td>'
+      + '<td class="muted mono">'+esc(r.workStart)+'–'+esc(r.workEnd)+'</td>'
+      + '<td class="muted mono">'+esc(r.punchedIn||'-')+' / '+esc(r.punchedOut||'-')+'</td>'
+      + '<td><input class="mono" data-i="'+i+'" data-f="inTime" value="'+esc(r.inTime)+'" placeholder="--:--"></td>'
+      + '<td><input class="mono" data-i="'+i+'" data-f="outTime" value="'+esc(r.outTime)+'" placeholder="--:--"></td>'
+      + '<td><input class="wide" data-i="'+i+'" data-f="lateMinutes" value="'+r.lateMinutes+'"> น.'+lateBadge+'</td>'
+      + '<td><input data-i="'+i+'" data-f="otHours" value="'+r.otHours+'"> ชม.</td>'
+      + '<td><input data-i="'+i+'" data-f="note" value="'+esc(r.note)+'" style="width:120px"></td>'
+      + '<td><button class="btn btn-sm btn-primary" data-action="save-day" data-i="'+i+'">บันทึก</button></td>'
+      + '</tr>';
+  }).join('');
+
+  $('panel-day').innerHTML = ''
+    + '<div class="card">'
+    +   '<div class="row">'
+    +     '<div class="field"><label>วันที่</label><input type="date" id="day-picker" value="'+dayDate+'"></div>'
+    +     '<button class="btn btn-ghost" id="day-go">ไป</button>'
+    +   '</div>'
+    +   '<table><thead><tr>'
+    +     '<th>พนักงาน</th><th>เวลางาน</th><th>เวลาที่กดจริง</th>'
+    +     '<th>เข้างาน</th><th>ออกงาน</th><th>หักสาย</th><th>โอที</th><th>หมายเหตุ</th><th></th>'
+    +   '</tr></thead><tbody>'+(rowsHtml || '<tr><td colspan="9" class="empty">ไม่มีข้อมูล</td></tr>')+'</tbody></table>'
+    + '</div>';
+
+  $('day-go').onclick = function(){ loadDay($('day-picker').value || todayStr()); };
+
+  $('panel-day').querySelectorAll('[data-action="save-day"]').forEach(function(btn){
+    btn.onclick = function(){ saveDayRow(Number(btn.dataset.i)); };
+  });
+}
+
+async function saveDayRow(i){
+  var tr = dayRows[i];
+  var get = function(f){
+    var el = document.querySelector('[data-i="'+i+'"][data-f="'+f+'"]');
+    return el ? el.value : '';
+  };
+  try{
+    var res = await api('saveDay', {
+      date: dayDate, empId: tr.empId,
+      inTime: get('inTime'), outTime: get('outTime'),
+      lateMinutes: Number(get('lateMinutes')) || 0,
+      otHours: Number(get('otHours')) || 0,
+      note: get('note')
+    });
+    toast('บันทึก '+empName(tr.empId)+' แล้ว');
+    tr.inTime = res.inTime; tr.outTime = res.outTime;
+    tr.lateMinutes = res.lateMinutes; tr.otHours = res.otHours;
+  }catch(e){ toast(e.message, true); }
+}
+
+/* ============================================================
+   เงิน (เบิกล่วงหน้า / เงินยืม)
+   ============================================================ */
+let moneyData = null;
+let moneyEmpId = null;
+let moneyMonth = monthStr(); // '' = ทั้งหมด
+
+async function loadMoney(empId){
+  moneyEmpId = empId;
+  $('panel-money').innerHTML = '<div class="loading">กำลังโหลด...</div>';
+  try{
+    var payload = empId ? {empId: empId} : {all:true};
+    moneyData = await api('money', payload);
+    renderMoney();
+  }catch(e){ $('panel-money').innerHTML = '<div class="empty">'+esc(e.message)+'</div>'; }
+}
+
+function renderMoney(){
+  // กรองเฉพาะฝั่งจอ (ข้อมูลดึงมาครบแล้ว ไม่ต้องยิง API ใหม่ตอนเปลี่ยนเดือน)
+  var advList = moneyData.advances.filter(function(a){ return !moneyMonth || a.period === moneyMonth; });
+  var loanList = moneyData.loans.filter(function(l){ return !moneyMonth || String(l.date).slice(0,7) === moneyMonth; });
+
+  var advRows = advList.map(function(a){
+    return '<tr><td>'+esc(a.name)+'</td><td class="mono">'+esc(a.date)+'</td>'
+      + '<td class="mono">'+baht(a.amount)+' บาท</td><td class="muted">'+esc(a.note)+'</td>'
+      + '<td><span class="badge '+(a.status==='open'?'open':'approved')+'">'+esc(a.status)+'</span></td></tr>';
+  }).join('') || '<tr><td colspan="5" class="empty">ไม่มีรายการ'+(moneyMonth?'ในเดือนนี้':'')+'</td></tr>';
+
+  var loanRows = loanList.map(function(l){
+    return '<tr><td>'+esc(l.name)+'</td><td class="mono">'+esc(l.date)+'</td>'
+      + '<td class="mono">'+baht(l.amount)+' บาท</td>'
+      + '<td class="mono">งวดละ '+baht(l.perInstallment)+'</td>'
+      + '<td class="mono">เหลือ '+baht(l.remaining)+' บาท</td>'
+      + '<td><span class="badge '+(l.status==='closed'?'approved':'open')+'">'+esc(l.status)+'</span></td>'
+      + '<td>'+(l.status!=='closed' ? '<button class="btn btn-sm btn-ghost" data-action="repay" data-id="'+l.loanId+'" data-per="'+l.perInstallment+'">รับชำระ</button>' : '')+'</td>'
+      + '</tr>';
+  }).join('') || '<tr><td colspan="7" class="empty">ไม่มีรายการ'+(moneyMonth?'ในเดือนนี้':'')+'</td></tr>';
+
+  $('panel-money').innerHTML = ''
+    + '<div class="stat-strip">'
+    +   '<div><div class="label">เบิกล่วงหน้าค้าง (open) — รวมทุกเดือน</div><div class="value">'+baht(moneyData.openAdvance)+'</div></div>'
+    +   '<div><div class="label">เงินยืมคงเหลือรวม</div><div class="value">'+baht(moneyData.loanRemaining)+'</div></div>'
+    + '</div>'
+    + '<div class="card">'
+    +   '<div class="row">'
+    +     '<div class="field"><label>ดูของพนักงาน</label><select id="money-emp-filter">'
+    +       '<option value="">ทั้งหมด</option>'+empOptions(moneyEmpId)+'</select></div>'
+    +     '<button class="btn btn-ghost" id="money-filter-go">แสดง</button>'
+    +     '<div class="field"><label>กรองเป็นเดือน (ตารางด้านล่าง)</label><input type="month" id="money-month-filter" value="'+esc(moneyMonth)+'"></div>'
+    +     '<button class="btn btn-ghost" id="money-month-clear">ดูทั้งหมด</button>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="card"><h2>บันทึกเบิกล่วงหน้าใหม่</h2>'
+    +   '<div class="row">'
+    +     '<div class="field"><label>พนักงาน</label><select id="adv-emp">'+empOptions()+'</select></div>'
+    +     '<div class="field"><label>จำนวนเงิน (บาท)</label><input id="adv-amount" type="number" min="0"></div>'
+    +     '<div class="field"><label>หมายเหตุ</label><input id="adv-note" type="text"></div>'
+    +     '<button class="btn btn-primary" id="adv-submit">บันทึกเบิก</button>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="card"><h2>เบิกล่วงหน้า'+(moneyMonth?' — '+esc(moneyMonth):'')+'</h2><table><thead><tr>'
+    +   '<th>พนักงาน</th><th>วันที่</th><th>จำนวน</th><th>หมายเหตุ</th><th>สถานะ</th>'
+    +   '</tr></thead><tbody>'+advRows+'</tbody></table></div>'
+    + '<div class="card"><h2>บันทึกเงินยืมใหม่</h2>'
+    +   '<div class="row">'
+    +     '<div class="field"><label>พนักงาน</label><select id="loan-emp">'+empOptions()+'</select></div>'
+    +     '<div class="field"><label>จำนวนที่ยืม (บาท)</label><input id="loan-amount" type="number" min="0"></div>'
+    +     '<div class="field"><label>หักต่องวด (บาท)</label><input id="loan-per" type="number" min="0"></div>'
+    +     '<div class="field"><label>หมายเหตุ</label><input id="loan-note" type="text"></div>'
+    +     '<button class="btn btn-primary" id="loan-submit">บันทึกยืม</button>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="card"><h2>เงินยืม'+(moneyMonth?' — เดือนที่ยืม '+esc(moneyMonth):'')+'</h2><table><thead><tr>'
+    +   '<th>พนักงาน</th><th>วันที่</th><th>ยอดยืม</th><th>งวด</th><th>คงเหลือ</th><th>สถานะ</th><th></th>'
+    +   '</tr></thead><tbody>'+loanRows+'</tbody></table></div>';
+
+  $('money-filter-go').onclick = function(){ loadMoney($('money-emp-filter').value || null); };
+  $('money-month-filter').onchange = function(){ moneyMonth = this.value; renderMoney(); };
+  $('money-month-clear').onclick = function(){ moneyMonth = ''; renderMoney(); };
+  $('adv-submit').onclick = submitAdvance;
+  $('loan-submit').onclick = submitLoan;
+  $('panel-money').querySelectorAll('[data-action="repay"]').forEach(function(btn){
+    btn.onclick = function(){ submitRepay(btn.dataset.id, Number(btn.dataset.per)); };
+  });
+}
+
+async function submitAdvance(){
+  var empId = $('adv-emp').value, amount = Number($('adv-amount').value);
+  if(!empId || !amount){ toast('กรอกจำนวนเงินด้วย', true); return; }
+  try{
+    var res = await api('addAdvance', {empId:empId, amount:amount, note:$('adv-note').value});
+    toast('บันทึกเบิกล่วงหน้าแล้ว' + (res.warn ? ' — '+res.warn : ''));
+    loadMoney(moneyEmpId);
+  }catch(e){ toast(e.message, true); }
+}
+
+async function submitLoan(){
+  var empId = $('loan-emp').value, amount = Number($('loan-amount').value), per = Number($('loan-per').value);
+  if(!empId || !amount || !per){ toast('กรอกให้ครบ', true); return; }
+  try{
+    await api('addLoan', {empId:empId, amount:amount, perInstallment:per, note:$('loan-note').value});
+    toast('บันทึกเงินยืมแล้ว');
+    loadMoney(moneyEmpId);
+  }catch(e){ toast(e.message, true); }
+}
+
+async function submitRepay(loanId, defaultAmount){
+  var amt = window.prompt('รับชำระงวดนี้เท่าไหร่ (บาท)?', defaultAmount);
+  if(amt === null) return;
+  try{
+    var res = await api('addRepay', {loanId:loanId, amount:Number(amt)});
+    toast(res.closed ? 'ปิดยอดเงินยืมแล้ว' : 'บันทึกรับชำระแล้ว เหลือ '+baht(res.remaining)+' บาท');
+    loadMoney(moneyEmpId);
+  }catch(e){ toast(e.message, true); }
+}
+
+/* ============================================================
+   อนุมัติการลา
+   ============================================================ */
+async function loadLeave(){
+  $('panel-leave').innerHTML = '<div class="loading">กำลังโหลด...</div>';
+  try{
+    var data = await api('pendingLeaves', {});
+    renderLeave(data.items);
+  }catch(e){ $('panel-leave').innerHTML = '<div class="empty">'+esc(e.message)+'</div>'; }
+}
+
+function renderLeave(items){
+  var rows = items.map(function(r){
+    var range = r.startDate===r.endDate ? r.startDate : r.startDate+' – '+r.endDate;
+    return '<tr><td>'+esc(r.name)+'</td><td>'+esc(TYPE_TH[r.type]||r.type)+'</td>'
+      + '<td class="mono">'+esc(range)+' ('+r.days+' วัน)</td>'
+      + '<td class="muted">'+esc(r.reason)+(r.clashWith?'<div class="muted">ชนกับ: '+esc(r.clashWith)+'</div>':'')+'</td>'
+      + '<td><button class="btn btn-sm btn-green" data-a="approved" data-id="'+esc(r.leaveId)+'">อนุมัติ</button> '
+      +   '<button class="btn btn-sm btn-red" data-a="rejected" data-id="'+esc(r.leaveId)+'">ไม่อนุมัติ</button></td></tr>';
+  }).join('') || '<tr><td colspan="5" class="empty">ไม่มีคำขอค้างอนุมัติ</td></tr>';
+
+  $('panel-leave').innerHTML = ''
+    + '<div class="card"><h2>คำขอลาที่รออนุมัติ</h2><table><thead><tr>'
+    +   '<th>พนักงาน</th><th>ประเภท</th><th>ช่วงวันที่</th><th>เหตุผล</th><th></th>'
+    +   '</tr></thead><tbody>'+rows+'</tbody></table></div>'
+    + '<div class="card"><h2>ลงลาแทนพนักงาน</h2>'
+    +   '<div class="row">'
+    +     '<div class="field"><label>พนักงาน</label><select id="lg-emp">'+empOptions()+'</select></div>'
+    +     '<div class="field"><label>ประเภท</label><select id="lg-type">'
+    +       '<option value="sick">ลาป่วย</option><option value="personal">ลากิจ</option>'
+    +       '<option value="vacation">พักร้อน</option><option value="unpaid">ลาไม่รับค่าจ้าง</option></select></div>'
+    +     '<div class="field"><label>วันเริ่ม</label><input id="lg-start" type="date" value="'+todayStr()+'"></div>'
+    +     '<div class="field"><label>วันสิ้นสุด</label><input id="lg-end" type="date" value="'+todayStr()+'"></div>'
+    +     '<div class="field"><label>เหตุผล</label><input id="lg-reason" type="text"></div>'
+    +     '<button class="btn btn-primary" id="lg-log-submit">บันทึก</button>'
+    +   '</div>'
+    + '</div>';
+
+  $('panel-leave').querySelectorAll('[data-a]').forEach(function(btn){
+    btn.onclick = function(){ decideLeaveAction(btn.dataset.id, btn.dataset.a); };
+  });
+  $('lg-log-submit').onclick = submitLogLeave;
+}
+
+async function decideLeaveAction(leaveId, decision){
+  try{
+    await api('decideLeave', {leaveId:leaveId, decision:decision});
+    toast(decision==='approved' ? 'อนุมัติแล้ว' : 'ไม่อนุมัติแล้ว');
+    loadLeave();
+  }catch(e){ toast(e.message, true); }
+}
+
+async function submitLogLeave(){
+  var empId = $('lg-emp').value;
+  try{
+    var res = await api('logLeaveForEmployee', {
+      empId: empId, type: $('lg-type').value,
+      startDate: $('lg-start').value, endDate: $('lg-end').value,
+      reason: $('lg-reason').value
+    });
+    toast('ลงลาให้ '+empName(empId)+' แล้ว ('+res.days+' วัน)');
+    $('lg-reason').value = '';
+  }catch(e){ toast(e.message, true); }
+}
+
+/* ============================================================
+   อนุมัติโอที
+   ============================================================ */
+async function loadOT(){
+  $('panel-ot').innerHTML = '<div class="loading">กำลังโหลด...</div>';
+  try{
+    var data = await api('pendingOT', {});
+    renderOT(data.items);
+  }catch(e){ $('panel-ot').innerHTML = '<div class="empty">'+esc(e.message)+'</div>'; }
+}
+
+function renderOT(items){
+  var rows = items.map(function(r){
+    return '<tr><td>'+esc(r.name)+'</td><td class="mono">'+esc(r.date)+'</td>'
+      + '<td><input class="wide" data-hours="'+esc(r.otId)+'" value="'+r.hoursRequested+'"> ชม.</td>'
+      + '<td><button class="btn btn-sm btn-green" data-a="approved" data-id="'+esc(r.otId)+'">อนุมัติ</button> '
+      +   '<button class="btn btn-sm btn-red" data-a="rejected" data-id="'+esc(r.otId)+'">ไม่อนุมัติ</button></td></tr>';
+  }).join('') || '<tr><td colspan="4" class="empty">ไม่มีคำขอค้างอนุมัติ</td></tr>';
+
+  $('panel-ot').innerHTML = '<div class="card"><h2>คำขอโอทีที่รออนุมัติ</h2><table><thead><tr>'
+    + '<th>พนักงาน</th><th>วันที่</th><th>ชั่วโมง (แก้ได้)</th><th></th>'
+    + '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+
+  $('panel-ot').querySelectorAll('[data-a]').forEach(function(btn){
+    btn.onclick = function(){
+      var hoursEl = document.querySelector('[data-hours="'+btn.dataset.id+'"]');
+      decideOTAction(btn.dataset.id, btn.dataset.a, hoursEl ? Number(hoursEl.value) : undefined);
+    };
+  });
+}
+
+async function decideOTAction(otId, decision, hoursActual){
+  try{
+    var payload = {otId:otId, decision:decision};
+    if(decision==='approved' && hoursActual !== undefined) payload.hoursActual = hoursActual;
+    await api('decideOT', payload);
+    toast(decision==='approved' ? 'อนุมัติโอทีแล้ว' : 'ไม่อนุมัติแล้ว');
+    loadOT();
+  }catch(e){ toast(e.message, true); }
+}
+
+/* ============================================================
+   ประกาศ
+   ============================================================ */
+async function loadAnn(){
+  $('panel-ann').innerHTML = '<div class="loading">กำลังโหลด...</div>';
+  try{
+    var list = await api('listAnn', {});
+    renderAnn(list);
+  }catch(e){ $('panel-ann').innerHTML = '<div class="empty">'+esc(e.message)+'</div>'; }
+}
+
+function renderAnn(list){
+  var rows = list.map(function(a){
+    var stateBadge = a.state==='กำลังแสดง' ? 'approved' : (a.state==='ปิดแล้ว' ? 'rejected' : 'pending');
+    return '<tr><td>'+esc(a.title)+'<div class="muted">'+esc(a.body||'')+'</div></td>'
+      + '<td class="mono">'+esc(a.startDate)+' – '+esc(a.endDate)+'</td>'
+      + '<td>'+esc(a.audience)+'</td>'
+      + '<td><span class="badge '+stateBadge+'">'+esc(a.state)+'</span></td>'
+      + '<td>'+(a.state==='กำลังแสดง' ? '<button class="btn btn-sm btn-ghost" data-action="end-ann" data-id="'+esc(a.annId)+'">ปิดประกาศ</button>' : '')+'</td>'
+      + '</tr>';
+  }).join('') || '<tr><td colspan="5" class="empty">ยังไม่มีประกาศ</td></tr>';
+
+  $('panel-ann').innerHTML = ''
+    + '<div class="card"><h2>ตั้งประกาศใหม่</h2>'
+    +   '<div class="row">'
+    +     '<div class="field"><label>หัวข้อ</label><input id="ann-title" type="text"></div>'
+    +     '<div class="field"><label>รายละเอียด</label><input id="ann-body" type="text"></div>'
+    +     '<div class="field"><label>เริ่มวันที่</label><input id="ann-start" type="date" value="'+todayStr()+'"></div>'
+    +     '<div class="field"><label>จำนวนวันที่แสดง</label><input id="ann-days" type="number" value="7" min="1"></div>'
+    +     '<div class="field"><label>แสดงให้</label><select id="ann-audience">'
+    +       '<option value="ทั้งคู่">ทั้งคู่</option><option value="ออฟฟิศ">ออฟฟิศ</option><option value="หน้าร้าน">หน้าร้าน</option></select></div>'
+    +     '<button class="btn btn-primary" id="ann-submit">ตั้งประกาศ</button>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="card"><h2>ประกาศทั้งหมด</h2><table><thead><tr>'
+    +   '<th>หัวข้อ</th><th>ช่วงวันที่</th><th>แสดงให้</th><th>สถานะ</th><th></th>'
+    +   '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+
+  $('ann-submit').onclick = submitAnn;
+  $('panel-ann').querySelectorAll('[data-action="end-ann"]').forEach(function(btn){
+    btn.onclick = function(){ endAnnAction(btn.dataset.id); };
+  });
+}
+
+async function submitAnn(){
+  var title = $('ann-title').value.trim();
+  if(!title){ toast('ใส่หัวข้อด้วย', true); return; }
+  try{
+    await api('createAnn', {
+      title:title, body:$('ann-body').value,
+      startDate:$('ann-start').value, days:Number($('ann-days').value)||7,
+      audience:$('ann-audience').value
+    });
+    toast('ตั้งประกาศแล้ว');
+    loadAnn();
+  }catch(e){ toast(e.message, true); }
+}
+
+async function endAnnAction(annId){
+  try{ await api('endAnn', {annId:annId}); toast('ปิดประกาศแล้ว'); loadAnn(); }
+  catch(e){ toast(e.message, true); }
+}
+
+/* ============================================================
+   ประวัติงาน
+   ============================================================ */
+async function loadTasks(month, q){
+  $('panel-tasks').innerHTML = '<div class="loading">กำลังโหลด...</div>';
+  try{
+    var data = await api('taskHistory', {month:month, q:q});
+    renderTasks(data);
+  }catch(e){ $('panel-tasks').innerHTML = '<div class="empty">'+esc(e.message)+'</div>'; }
+}
+
+function renderTasks(data){
+  var rows = data.items.map(function(t){
+    var badge = t.status==='done' ? 'done' : (t.status==='open' ? 'pending' : 'open');
+    return '<tr><td>'+esc(t.title)+'<div class="muted">'+esc(t.tag)+' · '+esc(t.department)+'</div></td>'
+      + '<td class="mono">'+esc(t.dueDate)+'</td>'
+      + '<td>'+esc(t.assignee||'ยังไม่มีคนรับ')+'</td>'
+      + '<td><span class="badge '+badge+'">'+esc(t.status)+'</span></td>'
+      + '<td class="mono">'+(t.tookDays!==''?t.tookDays+' วัน':'-')+'</td></tr>';
+  }).join('') || '<tr><td colspan="5" class="empty">ไม่มีงานในเดือนนี้</td></tr>';
+
+  var byPerson = data.byPerson.map(function(p){
+    return '<span class="tag" style="margin-right:6px">'+esc(p.name)+' '+p.done+'</span>';
+  }).join('') || '<span class="muted">-</span>';
+
+  $('panel-tasks').innerHTML = ''
+    + '<div class="card"><h2>สร้างงานใหม่</h2>'
+    +   '<div class="row">'
+    +     '<div class="field" style="min-width:220px"><label>หัวข้องาน</label><input type="text" id="tk-title"></div>'
+    +     '<div class="field" style="min-width:220px"><label>รายละเอียด</label><input type="text" id="tk-detail"></div>'
+    +     '<div class="field"><label>กำหนดวันที่</label><input type="date" id="tk-due" value="'+todayStr()+'"></div>'
+    +     '<div class="field"><label>แผนก</label><select id="tk-dept">'
+    +       '<option value="ทั้งคู่">ทั้งคู่</option><option value="ออฟฟิศ">ออฟฟิศ</option><option value="หน้าร้าน">หน้าร้าน</option></select></div>'
+    +     '<div class="field"><label>ป้ายกำกับ</label><input type="text" id="tk-tag" value="ทั่วไป"></div>'
+    +     '<button class="btn btn-primary" id="tk-submit">สร้างงาน</button>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="card">'
+    +   '<div class="row">'
+    +     '<div class="field"><label>เดือน</label><input type="month" id="tasks-month" value="'+data.month+'"></div>'
+    +     '<div class="field"><label>ค้นหาหัวข้อ</label><input type="text" id="tasks-q"></div>'
+    +     '<button class="btn btn-ghost" id="tasks-go">ค้นหา</button>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="stat-strip">'
+    +   '<div><div class="label">งานทั้งหมด</div><div class="value">'+data.stats.total+'</div></div>'
+    +   '<div><div class="label">เสร็จแล้ว</div><div class="value">'+data.stats.done+'</div></div>'
+    +   '<div><div class="label">ค้าง</div><div class="value">'+data.stats.pending+'</div></div>'
+    +   '<div><div class="label">เฉลี่ย (วัน)</div><div class="value">'+data.stats.avgDays+'</div></div>'
+    + '</div>'
+    + '<div class="card"><h2>จำนวนงานที่ทำเสร็จ รายคน</h2>'+byPerson+'</div>'
+    + '<div class="card"><h2>รายการงาน</h2><table><thead><tr>'
+    +   '<th>งาน</th><th>กำหนด</th><th>ผู้รับผิดชอบ</th><th>สถานะ</th><th>ใช้เวลา</th>'
+    +   '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+
+  $('tasks-go').onclick = function(){ loadTasks($('tasks-month').value || monthStr(), $('tasks-q').value); };
+  $('tk-submit').onclick = submitCreateTask;
+}
+
+async function submitCreateTask(){
+  var title = $('tk-title').value.trim();
+  if(!title){ toast('ใส่หัวข้องานด้วย', true); return; }
+  try{
+    await api('createTask', {
+      title: title, detail: $('tk-detail').value,
+      dueDate: $('tk-due').value, department: $('tk-dept').value,
+      tag: $('tk-tag').value || 'ทั่วไป'
+    });
+    toast('สร้างงานแล้ว');
+    $('tk-title').value = ''; $('tk-detail').value = '';
+    loadTasks($('tasks-month').value || monthStr(), $('tasks-q').value || '');
+  }catch(e){ toast(e.message, true); }
+}
+
+/* ============================================================
+   สลิปปลายเดือน
+   ============================================================ */
+let psData = null;
+let psPeriod = monthStr();
+
+async function loadPayslip(period){
+  psPeriod = period;
+  $('panel-payslip').innerHTML = '<div class="loading">กำลังโหลด...</div>';
+  try{
+    var data = await api('payslipPreview', {period: period});
+    psData = data.items;
+    renderPayslip();
+  }catch(e){ $('panel-payslip').innerHTML = '<div class="empty">'+esc(e.message)+'</div>'; }
+}
+
+function psNet(item){
+  return item.basePay + item.otPay + item.bonus - item.lateDeduction - item.advanceTotal - item.loanRepay - item.socialSecurity - item.otherDeduction;
+}
+
+function renderPayslip(){
+  var totalNet = psData.reduce(function(s,it){ return s + psNet(it); }, 0);
+
+  var cards = psData.map(function(it, i){
+    var advTitle = it.advances.map(function(a){ return a.note ? (baht(a.amount)+' — '+a.note) : baht(a.amount); }).join(' / ') || '-';
+    var loanInfo = it.loans.length
+      ? it.loans.map(function(l){ return 'คงเหลือ '+baht(l.remaining)+' (งวดละ~'+baht(l.perInstallment)+')'; }).join(', ')
+      : 'ไม่มีเงินยืมค้าง';
+    var locked = it.finalized;
+    return '<div class="ps-card'+(locked?' finalized':'')+'" data-i="'+i+'">'
+      + '<div class="ps-head"><div><div class="name">'+esc(it.name)+'</div>'
+      +   '<div class="meta">'+(it.payType==='daily' ? it.workDays+' วัน' : 'รายเดือน')+' · โอที '+it.otHours+' ชม. · สาย '+it.lateMinutes+' นาที</div></div>'
+      +   (locked ? '<span class="badge approved">ปิดยอดแล้ว</span>' : '')
+      + '</div>'
+      + '<div class="ps-nums">'
+      +   '<div><div class="label">ฐานเงินเดือน</div><div class="value">'+baht(it.basePay)+'</div></div>'
+      +   '<div><div class="label">โอที</div><div class="value pos">+'+baht(it.otPay)+'</div></div>'
+      +   '<div><div class="label">หักสาย</div><div class="value neg">-'+baht(it.lateDeduction)+'</div></div>'
+      +   '<div title="'+esc(advTitle)+'"><div class="label">เบิกล่วงหน้า</div><div class="value neg">-'+baht(it.advanceTotal)+'</div></div>'
+      +   '<div><div class="label">รวมหักอื่นๆ</div><div class="value neg">-'+baht(it.socialSecurity + it.otherDeduction + it.loanRepay)+'</div></div>'
+      +   '<div class="ps-net"><div class="label">สุทธิ</div><div class="value mono" data-net="'+i+'">'+baht(psNet(it))+'</div></div>'
+      + '</div>'
+      + '<div class="ps-edit">'
+      +   '<div class="field"><label>ประกันสังคม</label><input type="number" data-f="socialSecurity" data-i="'+i+'" value="'+it.socialSecurity+'" '+(locked?'disabled':'')+'></div>'
+      +   '<div class="field"><label>โบนัส/พิเศษ</label><input type="number" data-f="bonus" data-i="'+i+'" value="'+it.bonus+'" '+(locked?'disabled':'')+'></div>'
+      +   '<div class="field"><label>หักอื่นๆ</label><input type="number" data-f="otherDeduction" data-i="'+i+'" value="'+it.otherDeduction+'" '+(locked?'disabled':'')+'></div>'
+      +   '<div class="field" style="min-width:160px"><label>หมายเหตุหักอื่น</label><input type="text" data-f="otherNote" data-i="'+i+'" value="'+esc(it.otherNote)+'" '+(locked?'disabled':'')+'></div>'
+      +   '<div class="field"><label>หักเงินยืมงวดนี้</label><input type="number" data-f="loanRepay" data-i="'+i+'" value="'+it.loanRepay+'" '+(locked?'disabled':'')+'>'
+      +     '<div class="ps-loan-info">'+esc(loanInfo)+'</div></div>'
+      +   '<div class="ps-actions">'
+      +     '<button class="btn btn-sm btn-ghost" data-action="ps-slip" data-i="'+i+'">ดูสลิป</button>'
+      +     (locked ? '' : '<button class="btn btn-sm btn-ghost" data-action="ps-save" data-i="'+i+'">บันทึก</button>'
+      +       '<button class="btn btn-sm btn-primary" data-action="ps-final" data-i="'+i+'">ปิดยอด</button>')
+      +   '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('') || '<div class="empty">ไม่มีพนักงาน active</div>';
+
+  $('panel-payslip').innerHTML = ''
+    + '<div class="card">'
+    +   '<div class="row">'
+    +     '<div class="field"><label>เดือน</label><input type="month" id="ps-month" value="'+psPeriod+'"></div>'
+    +     '<button class="btn btn-ghost" id="ps-go">โหลด</button>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="stat-strip"><div><div class="label">ยอดสุทธิรวมทั้งหมด</div><div class="value">'+baht(totalNet)+' บาท</div></div></div>'
+    + cards;
+
+  $('ps-go').onclick = function(){ loadPayslip($('ps-month').value || monthStr()); };
+
+  $('panel-payslip').querySelectorAll('[data-f]').forEach(function(el){
+    el.addEventListener('input', function(){ psRecalc(Number(el.dataset.i)); });
+  });
+  $('panel-payslip').querySelectorAll('[data-action="ps-save"]').forEach(function(btn){
+    btn.onclick = function(){ savePayslipRow(Number(btn.dataset.i)); };
+  });
+  $('panel-payslip').querySelectorAll('[data-action="ps-final"]').forEach(function(btn){
+    btn.onclick = function(){ finalizePayslipRow(Number(btn.dataset.i)); };
+  });
+  $('panel-payslip').querySelectorAll('[data-action="ps-slip"]').forEach(function(btn){
+    btn.onclick = function(){ showPayslipSlip(Number(btn.dataset.i)); };
+  });
+}
+
+/* ---------- สลิปเงินเดือน (สำหรับแคปส่งพนักงาน) ---------- */
+const THAI_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+  "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+
+function showPayslipSlip(i){
+  // ใช้ค่าล่าสุดที่พิมพ์ไว้ในฟอร์ม (ยังไม่ต้องกดบันทึกก่อนก็ดูตัวอย่างได้) แทนค่าที่โหลดมาตอนแรก
+  var it = psData[i];
+  var ss = Number(psFieldVal(i,'socialSecurity'))||0;
+  var bonus = Number(psFieldVal(i,'bonus'))||0;
+  var other = Number(psFieldVal(i,'otherDeduction'))||0;
+  var otherNote = psFieldVal(i,'otherNote');
+  var loanRepay = Number(psFieldVal(i,'loanRepay'))||0;
+  var net = it.basePay + it.otPay + bonus - it.lateDeduction - it.advanceTotal - loanRepay - ss - other;
+
+  var mp = psPeriod.split('-').map(Number);
+  var today = new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
+
+  function row(label, value, isPlus){
+    var neg = value < 0;
+    return '<div class="breakdown-row'+(neg?' neg':'')+'"><span>'+esc(label)+'</span>'
+      + '<span>'+(neg?'-':(isPlus?'+':''))+baht(Math.abs(value))+'</span></div>';
+  }
+
+  var rows = row(it.payType==='daily' ? ('ค่าจ้าง ('+it.workDays+' วัน)') : 'เงินเดือน', it.basePay);
+  if(it.otHours > 0) rows += row('โอที ('+it.otHours+' ชม.)', it.otPay, true);
+  if(bonus > 0) rows += row('โบนัส/พิเศษ', bonus, true);
+  if(it.lateMinutes > 0) rows += row('หักมาสาย ('+it.lateMinutes+' นาที)', -it.lateDeduction);
+  if(it.advanceTotal > 0) rows += row('หักเบิกล่วงหน้า', -it.advanceTotal);
+  if(loanRepay > 0) rows += row('หักเงินยืม', -loanRepay);
+  if(ss > 0) rows += row('หักประกันสังคม', -ss);
+  if(other > 0) rows += row('หักอื่นๆ'+(otherNote?' ('+otherNote+')':''), -other);
+
+  var html = '<div class="slip-overlay" id="slip-overlay">'
+    + '<div class="slip-wrap">'
+    +   '<button class="back-btn" id="slip-close">‹ กลับ</button>'
+    +   '<div class="slip-card">'
+    +     '<div class="slip-brand">TK METAL SHEET</div>'
+    +     '<div class="slip-title">สลิปเงินเดือน</div>'
+    +     '<div class="slip-month">'+THAI_MONTHS[mp[1]-1]+' '+mp[0]+'</div>'
+    +     '<div class="slip-name-block"><div class="slip-name">'+esc(it.name)+'</div></div>'
+    +     '<div class="slip-rows">'+rows+'</div>'
+    +     '<div class="slip-net"><span>คงเหลือรับสุทธิ</span><span class="num">'+baht(net)+' บาท</span></div>'
+    +     '<div class="slip-date">ออกเมื่อ '+today+'</div>'
+    +   '</div>'
+    + '</div>'
+    + '</div>';
+
+  var div = document.createElement('div');
+  div.innerHTML = html;
+  document.body.appendChild(div.firstChild);
+  $('slip-close').onclick = function(){
+    var el = $('slip-overlay');
+    if(el) el.remove();
+  };
+}
+
+function psFieldVal(i, f){
+  var el = document.querySelector('[data-i="'+i+'"][data-f="'+f+'"]');
+  return el ? el.value : '';
+}
+
+function psRecalc(i){
+  var it = psData[i];
+  var ss = Number(psFieldVal(i,'socialSecurity'))||0;
+  var bonus = Number(psFieldVal(i,'bonus'))||0;
+  var other = Number(psFieldVal(i,'otherDeduction'))||0;
+  var loanRepay = Number(psFieldVal(i,'loanRepay'))||0;
+  var net = it.basePay + it.otPay + bonus - it.lateDeduction - it.advanceTotal - loanRepay - ss - other;
+  var el = document.querySelector('[data-net="'+i+'"]');
+  if(el) el.textContent = baht(net);
+}
+
+async function savePayslipRow(i){
+  var it = psData[i];
+  try{
+    await api('savePayrollAdj', {
+      period: psPeriod, empId: it.empId,
+      socialSecurity: Number(psFieldVal(i,'socialSecurity'))||0,
+      bonus: Number(psFieldVal(i,'bonus'))||0,
+      otherDeduction: Number(psFieldVal(i,'otherDeduction'))||0,
+      otherNote: psFieldVal(i,'otherNote'),
+      loanRepay: Number(psFieldVal(i,'loanRepay'))||0
+    });
+    toast('บันทึกสลิป '+it.name+' แล้ว');
+  }catch(e){ toast(e.message, true); }
+}
+
+async function finalizePayslipRow(i){
+  var it = psData[i];
+  if(!window.confirm('ปิดยอดสลิปของ '+it.name+' เดือน '+psPeriod+'?\n\nระบบจะปิดยอดเบิกล่วงหน้าที่หักไปแล้ว และบันทึกรับชำระเงินยืมตามจำนวนที่กรอกไว้ (ถ้ามี) — แก้ไขย้อนหลังไม่ได้')) return;
+  try{
+    await savePayslipRow(i);
+    await api('finalizePayslip', {period: psPeriod, empId: it.empId});
+    toast('ปิดยอด '+it.name+' แล้ว');
+    loadPayslip(psPeriod);
+  }catch(e){ toast(e.message, true); }
+}
+
+/* ---------- init ---------- */
+document.querySelectorAll('.tab-btn').forEach(function(b){
+  b.onclick = function(){ switchTab(b.dataset.tab); };
+});
+$('btn-logout').onclick = doLogout;
+$('lg-submit').onclick = doLogin;
+$('lg-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+
+(function init(){
+  if(sessionStorage.getItem(TOKEN_KEY)){
+    $('login-screen').style.display = 'none';
+    $('app-shell').style.display = 'block';
+    boot().catch(function(){ doLogout(); });
+  }
+})();
+
+})();
+</script>
+</body>
+</html>
